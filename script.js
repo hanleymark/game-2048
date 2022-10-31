@@ -180,7 +180,12 @@ class Board {
         if (tileMovesThisTurn > 0) {
             this.placeRandomTile();
         }
+
         this.draw();
+
+        if (this.isGameOver()) {
+            console.log("GAME OVER!");
+        }
     }
 
     swapTiles(item1, item2) {
@@ -204,6 +209,34 @@ class Board {
         this.tiles.forEach(tile => {
             tile.hasCombinedThisTurn = false;
         });
+    }
+
+    isGameOver() {
+        for (let i = 0; i < this.tiles.length; i++) {
+            let tile = this.tiles[i];
+            // Check for empty space
+            if (tile.index == 0) {
+                console.log("Empty space!");
+                return false;
+            }
+
+            // Check tile to right and tile down for same value
+
+            if (i % 4 != 3) {
+                if (tile.index == this.tiles[i + 1].index) {
+                    console.log(`${i} and ${i + 1} are equal!`);
+                    return false;
+                }
+            }
+
+            if (i < 12) {
+                if (tile.index == this.tiles[i + 4].index) {
+                    console.log(`${i} and ${i + 4} are equal!`);
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
 }
