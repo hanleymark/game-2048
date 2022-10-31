@@ -5,7 +5,12 @@ const EMPTY_TILE = 0;
 const UP = -4;
 const RIGHT = 1;
 const DOWN = 4;
-const LEFT = -4;
+const LEFT = -1;
+// Key press codes:
+const LEFT_ARROW = 37;
+const RIGHT_ARROW = 39;
+const UP_ARROW = 38;
+const DOWN_ARROW = 40;
 
 // Declare constructor for pairs foreground background colours for tiles
 class ColourPair {
@@ -36,7 +41,7 @@ class Tile {
     // Constructor receives index value from 0 to 11
     constructor(index) {
         this.index = index;
-        this.hasSwappedThisTurn = false;
+        this.hasCombinedThisTurn = false;
     }
     // Getter for 'text' property to be displayed on the tile (index of 0 is empty tile so no text)
     get text() {
@@ -70,16 +75,8 @@ class Board {
     setup() {
         this.clearBoard();
 
-        let emptySquares = [];
         for (let i = 0; i < 2; i++) {
-            // Get array of empty squares
-            emptySquares = this.getEmptySquares();
-            // Randomly generate index of 1 or 2 (1 = tile '2', 2 = tile '4')
-            const index = Math.floor(Math.random() * 2) + 1;
-            // Generate random location for tile in empty squares
-            const location = Math.floor(Math.random() * emptySquares.length);
-            // Add new tile to board
-            emptySquares[location].index = index;
+            this.placeRandomTile();
         }
     }
 
@@ -135,7 +132,7 @@ class Board {
                 tileMoveOrder = [4, 8, 12, 5, 9, 13, 6, 10, 14, 7, 11, 15];
                 break;
             case RIGHT:
-                tileMoveOrder = [3, 2, 1, 0, 6, 5, 4, 10, 9, 8, 14, 13, 12];
+                tileMoveOrder = [2, 1, 0, 6, 5, 4, 10, 9, 8, 14, 13, 12];
                 break;
             case DOWN:
                 tileMoveOrder = [8, 4, 0, 9, 5, 1, 10, 6, 2, 11, 7, 3];
@@ -143,6 +140,8 @@ class Board {
             case LEFT:
                 tileMoveOrder = [1, 2, 3, 5, 6, 7, 9, 10, 11, 13, 14, 15];
         }
+
+        let tileMovesThisTurn = 0;
 
         for (let i = 0; i < tileMoveOrder.length; i++) {
 
@@ -153,40 +152,75 @@ class Board {
                 continue;
             }
 
-            let numberOfMoves = Math.floor(tileIndex / 4);
+            // Calculate number of moves needed using position in tileMoveOrder array
+            let numberOfMoves = Math.floor(i % 3) + 1;
 
-            // THIS PART DOESN'T ACTUALLY SWAP AFTER THE FIRST ITERATION
             for (let m = 0; m < numberOfMoves; m++) {
                 let tileTo = this.tiles[tileIndex + direction];
+                tileFrom = this.tiles[tileIndex]
 
                 if (tileTo.index == EMPTY_TILE) {
-                    this.swapTiles(tileFrom, tileTo);
+                    this.swapTiles(tileIndex, tileIndex + direction);
+                    tileIndex += direction;
+                    tileMovesThisTurn++;
                 }
-                else if ((tileFrom.index == tileTo.index) && tileTo.hasSwappedThisTurn == false) {
+                else if ((tileFrom.index == tileTo.index) && tileFrom.hasCombinedThisTurn == false) {
                     tileFrom.index += 1;
-                    tileFrom.hasSwappedThisTurn = true;
+                    tileFrom.hasCombinedThisTurn = true;
                     tileTo.index = 0;
-                    this.swapTiles(tileFrom,tileTo);
+                    this.swapTiles(tileIndex, tileIndex + direction);
+                    tileIndex += direction;
+                    tileMovesThisTurn++;
                 }
-                break;
+                else break;
             }
+        }
+        this.resetHasCombinedFlags();
+
+        if (tileMovesThisTurn > 0) {
+            this.placeRandomTile();
         }
         this.draw();
     }
 
-    swapTiles(tile1, tile2) {
-        console.log(`Swapping  ${tile1.text}, with ${tile2.text}`);
-        let temp = tile1;
-        tile2 = tile1;
-        tile1 = temp;
+    swapTiles(item1, item2) {
+        let temp = board.tiles[item1];
+        board.tiles[item1] = board.tiles[item2];
+        board.tiles[item2] = temp;
+    }
+
+    placeRandomTile() {
+        // Get array of empty squares
+        let emptySquares = this.getEmptySquares();
+        // Randomly generate index of 1 or 2 (1 = tile '2', 2 = tile '4')
+        const index = Math.floor(Math.random() * 2) + 1;
+        // Generate random location for tile in empty squares
+        const location = Math.floor(Math.random() * emptySquares.length);
+        // Add new tile to board
+        emptySquares[location].index = index;
+    }
+
+    resetHasCombinedFlags() {
+        this.tiles.forEach(tile => {
+            tile.hasCombinedThisTurn = false;
+        });
     }
 
 }
 
 function keyDownHandler(event) {
-    
-    if (event.keyCode == 38) {
+
+    if (event.keyCode == UP_ARROW) {
         board.move(UP);
+    }
+    if (event.keyCode == DOWN_ARROW) {
+        board.move(DOWN);
+    }
+    if (event.keyCode == LEFT_ARROW) {
+        board.move(LEFT);
+    }
+    if (event.keyCode == RIGHT_ARROW) {
+        board.move(RIGHT);
     }
 }
 
