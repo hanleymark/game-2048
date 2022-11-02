@@ -12,7 +12,10 @@ const RIGHT_ARROW = 39;
 const UP_ARROW = 38;
 const DOWN_ARROW = 40;
 
-// Declare constructor for pairs foreground background colours for tiles
+// Get reference to 'new game' button
+const newGameButton = document.querySelector("#new-game-button");
+
+// Declare constructor for pairs of foreground background colours for tiles
 class ColourPair {
     constructor(foreground, background) {
         this.foreground = foreground;
@@ -20,7 +23,7 @@ class ColourPair {
     }
 }
 
-// Set up WCAG compliant colour pair values
+// Set upcolour pair values with WCAG compliant contrast (first one is blank tile)
 const colourPairs = [
     new ColourPair("#eee", "#eee"),
     new ColourPair("#000", "#ddd8b8"),
@@ -58,6 +61,7 @@ class Tile {
     }
 }
 
+// Class to hold game state and actions
 class Board {
     constructor(canvas) {
         this.tiles = new Array(16);
@@ -65,13 +69,14 @@ class Board {
         this.setup();
     }
 
-    // Fill board with empty tiles
+    // Fills board with empty tiles
     clearBoard() {
         for (let i = 0; i < this.tiles.length; i++) {
             this.tiles[i] = new Tile(EMPTY_TILE);
         }
     }
 
+    // Clears board and places two tiles with '2' or '4' value (index of 1 or 2)
     setup() {
         this.clearBoard();
 
@@ -80,6 +85,7 @@ class Board {
         }
     }
 
+    // Returns array of all remaining empty board squares
     getEmptySquares() {
         let emptySquares = [];
         this.tiles.forEach(tile => {
@@ -90,42 +96,55 @@ class Board {
         return emptySquares;
     }
 
+    // Draw board array of tiles on the canvas supplied in the constructor
     draw() {
         let canvasWidth = this.canvas.width;
-        let tileWidth = (canvasWidth / 4) * 0.95;
-        let gap = (canvasWidth / 4) * 0.05;
+        let tileWidth = (canvasWidth / 4) * 0.90;
+        let gap = (canvasWidth * 0.1) / 5;
         let xPos = 0;
         let yPos = 0;
         let x = 0;
         let y = 0;
 
         let context = this.canvas.getContext("2d");
+        let fontSize = (tileWidth / 8) * 2;
+
+        context.fontKerning = "none";
+        context.font = `${fontSize}px sans`;
 
         for (let i = 0; i < this.tiles.length; i++) {
             let tile = this.tiles[i];
             if (tile != null) {
+                // Calculate x and y coordinate offsets to get the text in the middle of the tile
+                let textPositionOffsetX = (3 - tile.text.length) * (fontSize * 0.4) + fontSize;
+                let textPositionOffsetY = fontSize * 2.35;
                 // Calculate xPos and yPos positions of tile based on tiles array index
+                if (tile.text.length == 1) {
+                    textPositionOffsetX -= fontSize / 12;
+                }
+
                 xPos = i % 4;
                 yPos = Math.floor(i / 4);
                 // Calculate 2D context coordinates of tile
-                x = (xPos * (tileWidth + gap));
-                y = (yPos * (tileWidth + gap));
+                x = gap + (xPos * (tileWidth + gap));
+                y = gap + (yPos * (tileWidth + gap));
 
-
-                context.font = "18px sans";
                 context.beginPath();
                 context.rect(x, y, tileWidth, tileWidth);
                 context.fillStyle = tile.colourPair.background;
                 context.fill();
                 context.fillStyle = tile.colourPair.foreground;
-                context.fillText(tile.text, x + 3, y + 30);
+                context.fillText(tile.text, x + textPositionOffsetX, y + textPositionOffsetY);
                 context.closePath();
             }
         }
     }
 
-
+    // Represents one game move
+    // Moves all movable tiles as far as they can go in the supplied direction
     move(direction) {
+        // Set up the order in which tiles (array elements) need to be moved to allow tile combinations
+        // N.B. First row/column in move direction does not need to be moved as it is on the edge
         let tileMoveOrder = [];
         switch (direction) {
             case UP:
@@ -141,13 +160,16 @@ class Board {
                 tileMoveOrder = [1, 2, 3, 5, 6, 7, 9, 10, 11, 13, 14, 15];
         }
 
+        // Set up counter of actual moves
         let tileMovesThisTurn = 0;
 
+        // Iterate through tiles in tileMoveOrder[] order
         for (let i = 0; i < tileMoveOrder.length; i++) {
 
             let tileIndex = tileMoveOrder[i];
             let tileFrom = this.tiles[tileIndex];
 
+            // If the tile being moved is empty, don't bother moving anything
             if (tileFrom.index == EMPTY_TILE) {
                 continue;
             }
@@ -155,39 +177,48 @@ class Board {
             // Calculate number of moves needed using position in tileMoveOrder array
             let numberOfMoves = Math.floor(i % 3) + 1;
 
+            // Loop through each tile and move it as far as it can go in the specified direction
             for (let m = 0; m < numberOfMoves; m++) {
                 let tileTo = this.tiles[tileIndex + direction];
                 tileFrom = this.tiles[tileIndex]
 
+                // If the tile being moved to is empty, swap the tileFrom into that space
                 if (tileTo.index == EMPTY_TILE) {
                     this.swapTiles(tileIndex, tileIndex + direction);
                     tileIndex += direction;
                     tileMovesThisTurn++;
                 }
+                // If the tile being moved to is the same value as the tile being moved
+                // AND it has not been combined already, then combine the tiles into one and increment its index by 1
                 else if ((tileFrom.index == tileTo.index) && tileFrom.hasCombinedThisTurn == false) {
                     tileFrom.index += 1;
+                    // Remember that a 'combine' action has been performed
                     tileFrom.hasCombinedThisTurn = true;
                     tileTo.index = 0;
                     this.swapTiles(tileIndex, tileIndex + direction);
                     tileIndex += direction;
                     tileMovesThisTurn++;
                 }
+                // Can't move the current tile in the specified direction so move onto the next
                 else break;
             }
         }
         this.resetHasCombinedFlags();
 
+        // If >=1 tiles were moved this turn, add a '2' or '4' tile at a random free space
         if (tileMovesThisTurn > 0) {
             this.placeRandomTile();
         }
 
+        // End of turn, redraw the board
         this.draw();
-
+    
         if (this.isGameOver()) {
-            console.log("GAME OVER!");
+            this.displayGameOver();
         }
     }
 
+    // Swap the two tiles in the tiles array with the supplied array subscripts
     swapTiles(item1, item2) {
         let temp = board.tiles[item1];
         board.tiles[item1] = board.tiles[item2];
@@ -204,34 +235,31 @@ class Board {
         // Add new tile to board
         emptySquares[location].index = index;
     }
-
+    // Resets all tiles to 'not combined this turn' status ready for next turn
     resetHasCombinedFlags() {
         this.tiles.forEach(tile => {
             tile.hasCombinedThisTurn = false;
         });
     }
 
+    // Check board for any spaces left and combinable tiles
     isGameOver() {
         for (let i = 0; i < this.tiles.length; i++) {
             let tile = this.tiles[i];
             // Check for empty space
             if (tile.index == 0) {
-                console.log("Empty space!");
                 return false;
             }
 
-            // Check tile to right and tile down for same value
-
+            // If not right hand column, check tile to right for same value
             if (i % 4 != 3) {
                 if (tile.index == this.tiles[i + 1].index) {
-                    console.log(`${i} and ${i + 1} are equal!`);
                     return false;
                 }
             }
-
+            // If not bottom row, check tile below for same value
             if (i < 12) {
                 if (tile.index == this.tiles[i + 4].index) {
-                    console.log(`${i} and ${i + 4} are equal!`);
                     return false;
                 }
             }
@@ -239,6 +267,9 @@ class Board {
         return true;
     }
 
+    displayGameOver() {
+        alert("GAME OVER!");
+    }
 }
 
 function keyDownHandler(event) {
@@ -257,8 +288,22 @@ function keyDownHandler(event) {
     }
 }
 
+
 const canvas = document.querySelector("#game-canvas");
 
 let board = new Board(canvas);
 document.addEventListener("keydown", keyDownHandler, false);
+
+newGameButton.addEventListener("click", function () { board.setup(); board.draw(); }, false);
+
 board.draw();
+
+
+
+/*
+NEXT STEPS:
+===========
+
+1. Create a nicer game over message!
+2. Implement swipe controls for touch enabled devices
+*/

@@ -2,4 +2,31 @@ canvas {
     background-color: #ddd;
     display: block;
     margin: 0 auto;
+    border-radius: 6px;
+}
+
+.container {
+    width: 480px;
+    height: 560px;
+    margin: auto;
+    text-align: center;
+}
+
+#new-game-button {
+    background-color: #777;
+    color: #fff;
+    border: 2px solid #333;
+    border-radius: 8px;
+    padding: 15px;
+    min-height: 30px;
+    min-width: 120px;
+    font-size: medium;
+    font-weight: bold;
+    margin-top: 2em;
+}
+
+#new-game-button:hover {
+    background-color: #ccc;
+    color: #000;
+    transition: 0.2s;
 }
