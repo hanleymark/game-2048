@@ -23,7 +23,7 @@ class ColourPair {
     }
 }
 
-// Set upcolour pair values with WCAG compliant contrast (first one is blank tile)
+// Set up colour pair values with WCAG compliant contrast (first one is blank tile)
 const colourPairs = [
     new ColourPair("#eee", "#eee"),
     new ColourPair("#000", "#ddd8b8"),
@@ -39,7 +39,7 @@ const colourPairs = [
     new ColourPair("#fff", "#542e71")
 ];
 
-// Tile constructor function
+// Class to represent state of one Tile
 class Tile {
     // Constructor receives index value from 0 to 11
     constructor(index) {
@@ -188,9 +188,12 @@ class Board {
                     tileIndex += direction;
                     tileMovesThisTurn++;
                 }
-                // If the tile being moved to is the same value as the tile being moved
-                // AND it has not been combined already, then combine the tiles into one and increment its index by 1
-                else if ((tileFrom.index == tileTo.index) && tileFrom.hasCombinedThisTurn == false) {
+                // If the tile being moved to is the same value as the tile being moved, AND neither tile
+                // has been combined already, then combine the tiles into one and increment its index by 1
+                else if ((
+                tileFrom.index == tileTo.index) &&
+                !tileFrom.hasCombinedThisTurn &&
+                !tileTo.hasCombinedThisTurn) {
                     tileFrom.index += 1;
                     // Remember that a 'combine' action has been performed
                     tileFrom.hasCombinedThisTurn = true;
@@ -212,7 +215,7 @@ class Board {
 
         // End of turn, redraw the board
         this.draw();
-    
+
         if (this.isGameOver()) {
             this.displayGameOver();
         }
